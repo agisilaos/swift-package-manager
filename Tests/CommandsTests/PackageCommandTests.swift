@@ -4910,6 +4910,42 @@ struct PackageCommandTests {
 
         @Test(
             .tags(
+                .Feature.Command.Build,
+                .Feature.PackageType.BuildToolPlugin,
+            ),
+            .requiresSwiftConcurrencySupport,
+            arguments: SupportedBuildSystemOnAllPlatforms,
+        )
+        func buildToolPluginCompilationDiagnostics(
+            buildSystem: BuildSystemProvider.Kind,
+        ) async throws {
+            let config = BuildConfiguration.debug
+            try await fixture(name: "Miscellaneous/Plugins/BuildToolPluginCompilationDiagnostic") { packageDir in
+                for extraArgs in [[], ["--verbose"]] {
+                    await expectThrowsCommandExecutionError(
+                        try await executeSwiftBuild(
+                            packageDir,
+                            configuration: config,
+                            extraArgs: extraArgs,
+                            buildSystem: buildSystem,
+                        ),
+                    ) { error in
+                        let output = error.stdout + error.stderr
+                        let diagnosticLines = output.components(separatedBy: "\n").filter {
+                            $0.contains("plugin.swift:9:") &&
+                                $0.contains("error: consecutive statements on a line must be separated by ';'")
+                        }
+                        #expect(diagnosticLines.count == 1, "stdout: \(error.stdout) stderr: \(error.stderr)")
+                        #expect(!output.contains("<PluginCompilationResult("))
+                        #expect(!output.contains("commandLine:"))
+                        #expect(!output.contains("compilerOutput:"))
+                    }
+                }
+            }
+        }
+
+        @Test(
+            .tags(
               .Feature.Command.Build,
               .Feature.PackageType.BuildToolPlugin
             ),
@@ -7874,21 +7910,105 @@ struct PackageCommandTests {
                     ) { error in
                         let stdout = error.stdout
                         let stderr = error.stderr
-                        withKnownIssue(isIntermittent: true) {
-                            #expect(
-                                stdout.contains(
-                                    "error: consecutive statements on a line must be separated by ';'"
-                                ),
-                                "iteration \(num) failed.  stderr: \(stderr)",
-                            )
-                        } when: {
-                            buildSystem == .native
-                        }
+                        let output = stdout + stderr
+                        #expect(
+                            output.contains("plugin.swift:7:"),
+                            "iteration \(num) failed. stdout: \(stdout) stderr: \(stderr)",
+                        )
+                        #expect(
+                            output.contains(
+                                "error: consecutive statements on a line must be separated by ';'",
+                            ),
+                            "iteration \(num) failed. stdout: \(stdout) stderr: \(stderr)",
+                        )
+                        #expect(!output.contains("<PluginCompilationResult("))
+                        #expect(!output.contains("commandLine:"))
+                        #expect(!output.contains("compilerOutput:"))
                         #expect(
                             !stdout.contains("Building for \(config.buildFor)..."),
                             "iteration \(num) failed.   stderr: \(stderr)",
                         )
                     }
+                }
+            }
+        }
+
+        @Test(
+            .requiresSwiftConcurrencySupport,
+            .tags(
+                .Feature.Command.Package.CommandPlugin,
+            ),
+            arguments: [BuildSystemProvider.Kind.native],
+        )
+        func commandPluginCompilationDiagnostics(
+            buildSystem: BuildSystemProvider.Kind,
+        ) async throws {
+            let config = BuildConfiguration.debug
+            try await fixture(name: "Miscellaneous/Plugins/CommandPluginCompilationError") { packageDir in
+                for extraArgs in [[], ["--verbose"]] {
+                    await expectThrowsCommandExecutionError(
+                        try await execute(
+                            extraArgs + ["plugin", "my-build-tester"],
+                            packagePath: packageDir,
+                            configuration: config,
+                            buildSystem: buildSystem,
+                        ),
+                    ) { error in
+                        let output = error.stdout + error.stderr
+                        let diagnosticLines = output.components(separatedBy: "\n").filter {
+                            $0.contains("plugin.swift:7:") &&
+                                $0.contains("error: consecutive statements on a line must be separated by ';'")
+                        }
+                        #expect(diagnosticLines.count == 1, "stdout: \(error.stdout) stderr: \(error.stderr)")
+                        #expect(!output.contains("<PluginCompilationResult("))
+                        #expect(!output.contains("commandLine:"))
+                        #expect(!output.contains("compilerOutput:"))
+                    }
+                }
+            }
+        }
+
+        @Test(
+            .requiresSwiftConcurrencySupport,
+            .tags(
+                .Feature.Command.Package.CommandPlugin,
+            ),
+            arguments: [BuildSystemProvider.Kind.native],
+        )
+        func commandPluginCompilationWarningsRespectQuiet(
+            buildSystem: BuildSystemProvider.Kind,
+        ) async throws {
+            let config = BuildConfiguration.debug
+
+            // Confirm that the fixture actually emits the compiler warning this test filters.
+            try await fixture(name: "Miscellaneous/Plugins/CommandPluginCompilationWarning") { packageDir in
+                let (stdout, stderr) = try await execute(
+                    ["--verbose", "plugin", "my-warning-tester"],
+                    packagePath: packageDir,
+                    configuration: config,
+                    buildSystem: buildSystem,
+                )
+                let output = stdout + stderr
+                #expect(
+                    output.contains("warning: variable 'unused' was never used"),
+                    "stdout: \(stdout) stderr: \(stderr)",
+                )
+            }
+
+            try await fixture(name: "Miscellaneous/Plugins/CommandPluginCompilationWarning") { packageDir in
+                // Run twice to cover both a fresh compilation and the cached result.
+                for _ in 1...2 {
+                    let (stdout, stderr) = try await execute(
+                        ["--quiet", "plugin", "my-warning-tester"],
+                        packagePath: packageDir,
+                        configuration: config,
+                        buildSystem: buildSystem,
+                    )
+                    let output = stdout + stderr
+                    #expect(
+                        !output.contains("warning: variable 'unused' was never used"),
+                        "stdout: \(stdout) stderr: \(stderr)",
+                    )
                 }
             }
         }
