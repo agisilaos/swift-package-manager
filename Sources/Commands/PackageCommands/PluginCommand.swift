@@ -127,6 +127,14 @@ struct PluginCommand: AsyncSwiftCommand {
             help: "Limit available plugins to a single package with the given identity."
         )
         var packageIdentity: String? = nil
+
+        /// Determines whether binaries built by the plugin should statically link the Swift standard library.
+        @Flag(
+            name: .customLong("static-swift-stdlib"),
+            inversion: .prefixedNo,
+            help: "Determines whether Swift stdlib links statically."
+        )
+        var shouldLinkStaticSwiftStdlib: Bool?
     }
 
     @OptionGroup()
@@ -364,7 +372,12 @@ struct PluginCommand: AsyncSwiftCommand {
         }
 
         // Set up a delegate to handle callbacks from the command plugin.
-        let pluginDelegate = PluginDelegate(swiftCommandState: swiftCommandState, buildSystem: buildSystemKind, plugin: pluginTarget)
+        let pluginDelegate = PluginDelegate(
+            swiftCommandState: swiftCommandState,
+            buildSystem: buildSystemKind,
+            plugin: pluginTarget,
+            shouldLinkStaticSwiftStdlib: options.shouldLinkStaticSwiftStdlib ?? false
+        )
         let delegateQueue = DispatchQueue(label: "plugin-invocation")
 
         // Run the command plugin.

@@ -9,9 +9,13 @@ struct diagnostics_stub: CommandPlugin {
         if arguments.contains("build") {
             // If echoLogs is true, SwiftPM will print build logs to stderr as they are produced.
             // SwiftPM does not add a prefix to these logs.
+            let logging: PackageManager.BuildLogVerbosity = arguments.contains("verbose") ? .verbose : .concise
             let result = try packageManager.build(
                 .product("placeholder"),
-                parameters: .init(echoLogs: arguments.contains("echologs"))
+                parameters: .init(
+                    logging: logging,
+                    echoLogs: arguments.contains("echologs")
+                )
             )
 
             // To verify that logs are also returned correctly to the plugin,

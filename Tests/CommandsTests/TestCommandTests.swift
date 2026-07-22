@@ -67,6 +67,16 @@ struct TestCommandTests {
         #expect(stdout.contains("USAGE: swift test"), "got stdout:\n\(stdout)")
     }
 
+    @Test
+    func staticSwiftStdlibOptionRemainsUnavailable() {
+        do {
+            _ = try SwiftTestCommand.parseAsRoot(["--static-swift-stdlib"])
+            Issue.record("Expected swift test to reject --static-swift-stdlib")
+        } catch {
+            #expect(SwiftTestCommand.message(for: error).contains("Unknown option '--static-swift-stdlib'"))
+        }
+    }
+
     @Test(
         arguments: SupportedBuildSystemOnAllPlatforms,
     )
@@ -2564,4 +2574,3 @@ struct TestCommandTests {
         }
     }
 }
-

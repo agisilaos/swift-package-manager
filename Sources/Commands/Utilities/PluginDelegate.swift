@@ -27,12 +27,19 @@ final class PluginDelegate: PluginInvocationDelegate {
     let swiftCommandState: SwiftCommandState
     let buildSystem: BuildSystemProvider.Kind
     let plugin: PluginModule
+    let shouldLinkStaticSwiftStdlib: Bool
     var lineBufferedOutput: Data
 
-    init(swiftCommandState: SwiftCommandState, buildSystem: BuildSystemProvider.Kind, plugin: PluginModule) {
+    init(
+        swiftCommandState: SwiftCommandState,
+        buildSystem: BuildSystemProvider.Kind,
+        plugin: PluginModule,
+        shouldLinkStaticSwiftStdlib: Bool
+    ) {
         self.swiftCommandState = swiftCommandState
         self.buildSystem = buildSystem
         self.plugin = plugin
+        self.shouldLinkStaticSwiftStdlib = shouldLinkStaticSwiftStdlib
         self.lineBufferedOutput = Data()
     }
 
@@ -169,6 +176,7 @@ final class PluginDelegate: PluginInvocationDelegate {
             explicitBuildSystem: buildSystem,
             explicitProduct: explicitProduct,
             cacheBuildManifest: false,
+            shouldLinkStaticSwiftStdlib: self.shouldLinkStaticSwiftStdlib,
             productsBuildParameters: buildParameters,
             toolsBuildParameters: toolsBuildParameters,
             outputStream: outputStream,

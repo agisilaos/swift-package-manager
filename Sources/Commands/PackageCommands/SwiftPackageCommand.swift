@@ -196,7 +196,7 @@ extension PluginCommand.PluginOptions {
     func merged(with other: Self) -> Self {
         // validate against developer mistake
         assert(
-            Mirror(reflecting: self).children.count == 4,
+            Mirror(reflecting: self).children.count == 5,
             "Property added to PluginOptions without updating merged(with:)!"
         )
         // actual merge
@@ -209,6 +209,9 @@ extension PluginCommand.PluginOptions {
         }
         if other.packageIdentity != nil {
             merged.packageIdentity = other.packageIdentity
+        }
+        if let shouldLinkStaticSwiftStdlib = other.shouldLinkStaticSwiftStdlib {
+            merged.shouldLinkStaticSwiftStdlib = shouldLinkStaticSwiftStdlib
         }
         return merged
     }

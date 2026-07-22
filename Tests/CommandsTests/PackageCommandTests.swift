@@ -113,6 +113,21 @@ struct PackageCommandTests {
     }
 
     @Test(
+        .issue("https://github.com/swiftlang/swift-package-manager/issues/8424", relationship: .verifies)
+    )
+    func staticSwiftStdlibOptionIsAcceptedForPluginInvocation() throws {
+        let command = try #require(
+            SwiftPackageCommand.parseAsRoot([
+                "--static-swift-stdlib",
+                "my-plugin",
+            ]) as? SwiftPackageCommand.DefaultCommand
+        )
+
+        #expect(command.pluginOptions.shouldLinkStaticSwiftStdlib == true)
+        #expect(command.remaining == ["my-plugin"])
+    }
+
+    @Test(
         .issue("rdar://131126477", relationship: .defect),
         arguments: SupportedBuildSystemOnAllPlatforms,
     )
@@ -6023,6 +6038,40 @@ struct PackageCommandTests {
                 }
                 expectFileDoesNotExist(at: fileShouldNotExist, "build-target build-inherit")
                 expectFileIsExecutable(at: fileShouldExist, "build-target build-inherit")
+            }
+        }
+
+        @Test(
+            .issue("https://github.com/swiftlang/swift-package-manager/issues/8424", relationship: .verifies),
+            .tags(
+                .Feature.Command.Build,
+                .Feature.Command.Package.CommandPlugin,
+                .Feature.PackageType.CommandPlugin
+            ),
+            .requiresStdlibSupport,
+            .requiresSwiftConcurrencySupport
+        )
+        func commandPluginBuildHonorsStaticSwiftStdlib() async throws {
+            let config = BuildConfiguration.debug
+
+            try await fixture(name: "Miscellaneous/Plugins/CommandPluginTestStub") { fixturePath in
+                let (stdout, _) = try await execute(
+                    [
+                        "--static-swift-stdlib",
+                        "print-diagnostics",
+                        "build",
+                        "printlogs",
+                        "verbose",
+                    ],
+                    packagePath: fixturePath,
+                    configuration: config,
+                    buildSystem: .native
+                )
+
+                #expect(
+                    stdout.contains("-static-stdlib"),
+                    "Expected plugin-requested build to link the static Swift stdlib. Output: \(stdout)"
+                )
             }
         }
 

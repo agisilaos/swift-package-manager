@@ -52,7 +52,9 @@ package plugin [--package-path=<package-path>]
   [--allow-writing-to-package-directory]
   [--allow-writing-to-directory=<allow-writing-to-directory>...]
   [--allow-network-connections=<allow-network-connections>]
-  [--package=<package>] [<command>] [<arguments>...]
+  [--package=<package>]
+  [--static-swift-stdlib|no-static-swift-stdlib]
+  [<command>] [<arguments>...]
   [--version] [--help]
 ```
 
@@ -311,6 +313,11 @@ By default, color diagnostics are enabled when connected to a TTY and disabled o
 *Limit available plugins to a single package with the given identity.*
 
 
+- term **--static-swift-stdlib|no-static-swift-stdlib**:
+
+*Determines whether Swift stdlib links statically.*
+
+
 - term **command**:
 
 *Verb of the command plugin to invoke.*
@@ -329,4 +336,3 @@ By default, color diagnostics are enabled when connected to a TTY and disabled o
 - term **--help**:
 
 *Show help information.*
-
