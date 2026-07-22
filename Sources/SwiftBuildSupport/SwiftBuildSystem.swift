@@ -591,7 +591,7 @@ public final class SwiftBuildSystem: SPMBuildCore.BuildSystem {
 
             func didCompilePlugin(result: PluginCompilationResult) {
                 if !result.compilerOutput.isEmpty && !result.succeeded {
-                    print(result.compilerOutput, to: &stdoutStream)
+                    self.observabilityScope.print(result.compilerOutput, condition: .always)
                 } else if !result.compilerOutput.isEmpty {
                     observabilityScope.emit(info: result.compilerOutput)
                 }

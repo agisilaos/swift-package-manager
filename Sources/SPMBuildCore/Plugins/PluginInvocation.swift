@@ -431,7 +431,8 @@ extension PluginModule {
             fileSystem: fileSystem,
             delegateQueue: delegateQueue,
             toolPaths: toolPaths,
-            builtToolPaths: builtToolPaths
+            builtToolPaths: builtToolPaths,
+            observabilityScope: observabilityScope,
         )
 
         let startTime = DispatchTime.now()
@@ -773,6 +774,7 @@ final class DefaultPluginInvocationDelegate: PluginInvocationDelegate {
     let delegateQueue: DispatchQueue
     let toolPaths: [AbsolutePath]
     let builtToolPaths: [AbsolutePath]
+    let observabilityScope: ObservabilityScope
     var outputData = Data()
     var diagnostics = [Basics.Diagnostic]()
     var buildCommands = [BuildToolPluginInvocationResult.BuildCommand]()
@@ -782,17 +784,22 @@ final class DefaultPluginInvocationDelegate: PluginInvocationDelegate {
         fileSystem: FileSystem,
         delegateQueue: DispatchQueue,
         toolPaths: [AbsolutePath],
-        builtToolPaths: [AbsolutePath]
+        builtToolPaths: [AbsolutePath],
+        observabilityScope: ObservabilityScope,
     ) {
         self.fileSystem = fileSystem
         self.delegateQueue = delegateQueue
         self.toolPaths = toolPaths
         self.builtToolPaths = builtToolPaths
+        self.observabilityScope = observabilityScope
     }
 
     func pluginCompilationStarted(commandLine: [String], environment: [String: String]) {}
 
-    func pluginCompilationEnded(result: PluginCompilationResult) {}
+    func pluginCompilationEnded(result: PluginCompilationResult) {
+        guard !result.succeeded, !result.compilerOutput.isEmpty else { return }
+        self.observabilityScope.print(result.compilerOutput, condition: .always)
+    }
 
     func pluginCompilationWasSkipped(cachedResult: PluginCompilationResult) {}
 

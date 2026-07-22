@@ -414,7 +414,9 @@ final class LLBuildProgressTracker: LLBuildBuildSystemDelegate, SwiftCompilerOut
     /// when verboseOnly is set to true, the output will only be printed in verbose logging mode
     func preparationStepHadOutput(_ name: String, output: String, verboseOnly: Bool) {
         guard !logLevel.isQuiet else { return }
-        self.queue.async {
+        // Preparation-step failures can immediately terminate the build. Write their
+        // output before returning so diagnostics aren't lost when the error propagates.
+        self.queue.sync {
             self.progressAnimation.clear()
             if !verboseOnly || self.logLevel.isVerbose {
                 self.outputStream.send("\(output.spm_chomp())\n")

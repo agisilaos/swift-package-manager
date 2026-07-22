@@ -373,11 +373,7 @@ public struct DefaultPluginScriptRunner: PluginScriptRunner, Cancellable {
             // We are now on our caller's requested callback queue, so we just call the completion handler directly.
             dispatchPrecondition(condition: .onQueue(callbackQueue))
             completion($0.tryMap { process in
-                // Emit the compiler output as observable info.
                 let compilerOutput = ((try? process.utf8Output()) ?? "") + ((try? process.utf8stderrOutput()) ?? "")
-                if !compilerOutput.isEmpty {
-                    observabilityScope.emit(info: compilerOutput)
-                }
 
                 // Save the persisted compilation state for possible reuse next time.
                 let compilationState = PersistedCompilationState(
@@ -386,6 +382,13 @@ public struct DefaultPluginScriptRunner: PluginScriptRunner, Cancellable {
                     inputHash: compilerInputHash,
                     output: compilerOutput,
                     result: .init(process.exitStatus))
+
+                // Successful compiler output is informational. Failed compiler output is
+                // surfaced by the delegate so it remains visible at every log level.
+                if compilationState.succeeded && !compilerOutput.isEmpty {
+                    observabilityScope.emit(info: compilerOutput)
+                }
+
                 do {
                     try JSONEncoder.makeWithDefaults().encode(path: stateFilePath, fileSystem: self.fileSystem, compilationState)
                 }
@@ -669,8 +672,8 @@ public enum DefaultPluginScriptRunnerError: Error, CustomStringConvertible {
             return "plugin is unavailable: \(reason)"
         case .compilationPreparationFailed(let error):
             return "plugin compilation preparation failed: \(error.interpolationDescription)"
-        case .compilationFailed(let result):
-            return "plugin compilation failed: \(result)"
+        case .compilationFailed:
+            return "plugin compilation failed"
         case .invocationFailed(let error, let command):
             return "plugin invocation failed: \(error.interpolationDescription) \(makeContextString(command, ""))"
         case .invocationEndedBySignal(let signal, let command, let output):

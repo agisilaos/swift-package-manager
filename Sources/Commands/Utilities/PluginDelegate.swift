@@ -40,9 +40,16 @@ final class PluginDelegate: PluginInvocationDelegate {
     }
 
     func pluginCompilationEnded(result: PluginCompilationResult) {
+        self.handleCompilationOutput(result)
     }
 
     func pluginCompilationWasSkipped(cachedResult: PluginCompilationResult) {
+        self.handleCompilationOutput(cachedResult)
+    }
+
+    private func handleCompilationOutput(_ result: PluginCompilationResult) {
+        guard !result.succeeded, !result.compilerOutput.isEmpty else { return }
+        swiftCommandState.observabilityScope.print(result.compilerOutput, condition: .always)
     }
 
     func pluginEmittedOutput(_ data: Data) {
